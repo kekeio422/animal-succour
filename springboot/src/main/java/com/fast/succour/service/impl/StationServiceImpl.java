@@ -18,8 +18,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static com.fast.system.general.utils.SecurityUtils.getUserId;
@@ -33,6 +36,7 @@ import static com.fast.system.general.utils.SecurityUtils.getUserId;
 @Service
 public class StationServiceImpl implements IStationService {
     private static final String GEOCODE_URL = "https://restapi.amap.com/v3/geocode/geo";
+    private static final String INPUT_TIPS_URL = "https://restapi.amap.com/v3/assistant/inputtips";
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().build();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -143,6 +147,65 @@ public class StationServiceImpl implements IStationService {
     @Override
     public List<Station> selectStationListByIsAuth() {
         return stationMapper.selectStationListByIsAuth();
+    }
+
+
+
+    @Override
+    public List<Map<String, String>> selectAddressTips(String keywords) {
+        if (StringUtils.isBlank(keywords)) {
+            return List.of();
+        }
+        if (StringUtils.isBlank(amapWebKey)) {
+            throw new RuntimeException("地图服务未配置高德 Web Key，请联系管理员配置 map.amap.web-key");
+        }
+        try {
+            String encodeKeywords = URLEncoder.encode(keywords, StandardCharsets.UTF_8);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(INPUT_TIPS_URL + "?keywords=" + encodeKeywords + "&datatype=all&key=" + amapWebKey))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            JsonNode root = OBJECT_MAPPER.readTree(response.body());
+            if (!"1".equals(root.path("status").asText())) {
+                throw new RuntimeException("地址联想失败，请稍后重试");
+            }
+            JsonNode tips = root.path("tips");
+            if (!tips.isArray() || tips.isEmpty()) {
+                return List.of();
+            }
+            List<Map<String, String>> result = new ArrayList<>();
+            for (JsonNode tip : tips) {
+                String location = tip.path("location").asText();
+                if (StringUtils.isBlank(location) || !location.contains(",")) {
+                    continue;
+                }
+                String district = tip.path("district").asText("");
+                String address = tip.path("address").asText("");
+                String name = tip.path("name").asText("");
+                String fullAddress = (district + address + name).trim();
+                if (StringUtils.isBlank(fullAddress)) {
+                    continue;
+                }
+                String[] locationParts = location.split(",");
+                if (locationParts.length != 2) {
+                    continue;
+                }
+                Map<String, String> row = new HashMap<>();
+                row.put("name", name);
+                row.put("fullAddress", fullAddress);
+                row.put("district", district);
+                row.put("address", address);
+                row.put("longitude", locationParts[0]);
+                row.put("latitude", locationParts[1]);
+                result.add(row);
+            }
+            return result;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("地址联想失败，请稍后重试");
+        }
     }
 
     /**

@@ -9,6 +9,7 @@ import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 救助站Controller
@@ -87,6 +88,15 @@ public class StationController extends BaseController {
     @GetMapping("/selectStationListByIsAuth")
     public AjaxResult selectStationListByIsAuth() {
         List<Station> list = stationService.selectStationListByIsAuth();
+        return success(list);
+    }
+
+    /**
+     * 地址联想建议
+     */
+    @GetMapping("/addressTips")
+    public AjaxResult addressTips(@RequestParam("keywords") String keywords) {
+        List<Map<String, String>> list = stationService.selectAddressTips(keywords);
         return success(list);
     }
 

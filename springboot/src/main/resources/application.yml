@@ -73,4 +73,4 @@ pagehelper:
 map:
   amap:
     # 高德 JS/HTTP API Key（必填，否则地址解析会失败）
-    web-key: ""
+    web-key: "1135ada37912bd6e28f7f7307c4f6962"

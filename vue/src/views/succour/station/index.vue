@@ -138,13 +138,15 @@
           <el-input v-model="form.email" placeholder="请输入电子邮箱"/>
         </el-form-item>
         <el-form-item label="详细地址" prop="address">
-          <el-input v-model="form.address" type="textarea" placeholder="请填写真实地址（用于地图展示）"/>
-        </el-form-item>
-        <el-form-item label="纬度" prop="latitude">
-          <el-input v-model="form.latitude" placeholder="如：39.9042"/>
-        </el-form-item>
-        <el-form-item label="经度" prop="longitude">
-          <el-input v-model="form.longitude" placeholder="如：116.4074"/>
+          <el-autocomplete
+              v-model="form.address"
+              :fetch-suggestions="queryAddressTips"
+              value-key="value"
+              placeholder="请输入详细地址，支持联想定位"
+              style="width: 100%"
+              clearable
+              @select="handleAddressSelect"
+          />
         </el-form-item>
         <el-form-item label="救助站描述" prop="description">
           <el-input v-model="form.description" type="textarea" placeholder="请输入内容"/>
@@ -167,11 +169,8 @@
 </template>
 
 <script setup>
-import {listStation, getStation, delStation, addStation, updateStation, toAuth} from "@/api/succour/station"
-import {getToken} from "@/utils/auth.js";
+import {listStation, getStation, delStation, addStation, updateStation, toAuth, addressTips} from "@/api/succour/station"
 import {ElMessage, ElMessageBox} from "element-plus";
-
-const baseURL = import.meta.env.VITE_APP_BASE_API
 
 const queryRef = ref()
 const stationRef = ref()
@@ -232,6 +231,30 @@ const data = reactive({
 })
 
 const {queryParams, form, rules} = toRefs(data)
+
+
+const queryAddressTips = (queryString, cb) => {
+  if (!queryString || !queryString.trim()) {
+    cb([])
+    return
+  }
+  addressTips(queryString.trim()).then((res) => {
+    const rows = (res.data || []).map(item => ({
+      value: item.fullAddress,
+      latitude: item.latitude,
+      longitude: item.longitude
+    }))
+    cb(rows)
+  }).catch(() => cb([]))
+}
+
+const handleAddressSelect = (item) => {
+  form.value.address = item.value
+  if (item.latitude && item.longitude) {
+    form.value.latitude = item.latitude
+    form.value.longitude = item.longitude
+  }
+}
 
 //通过认证
 const handleAuth = (row) => {
