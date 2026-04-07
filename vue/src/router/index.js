@@ -92,6 +92,11 @@ export const constantRoutes = [
         component: () => import('@/views/userPage/urgent'),
         hidden: true,
       },
+      {
+        path: 'forum',
+        component: () => import('@/views/userPage/forum'),
+        hidden: true,
+      },
     ]
   },
   {

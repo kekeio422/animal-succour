@@ -46,6 +46,12 @@
                 </el-icon>
                 紧急求助
               </el-menu-item>
+              <el-menu-item v-if="nickName" index="/user/forum">
+                <el-icon>
+                  <ChatLineRound/>
+                </el-icon>
+                社区论坛
+              </el-menu-item>
               <el-menu-item index="/user/self">
                 <el-icon>
                   <UserFilled/>
