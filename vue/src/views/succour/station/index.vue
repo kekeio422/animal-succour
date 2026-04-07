@@ -80,6 +80,8 @@
       <el-table-column label="联系电话" align="center" prop="phone"/>
       <el-table-column label="电子邮箱" align="center" prop="email"/>
       <el-table-column label="详细地址" align="center" prop="address"/>
+      <el-table-column label="纬度" align="center" prop="latitude" width="120"/>
+      <el-table-column label="经度" align="center" prop="longitude" width="120"/>
       <el-table-column label="救助站描述" align="center" prop="description"/>
       <el-table-column label="营业执照" align="center" prop="businessLicense" width="100">
         <template #default="scope">
@@ -137,6 +139,12 @@
         </el-form-item>
         <el-form-item label="详细地址" prop="address">
           <el-input v-model="form.address" type="textarea" placeholder="请填写真实地址（用于地图展示）"/>
+        </el-form-item>
+        <el-form-item label="纬度" prop="latitude">
+          <el-input v-model="form.latitude" placeholder="如：39.9042"/>
+        </el-form-item>
+        <el-form-item label="经度" prop="longitude">
+          <el-input v-model="form.longitude" placeholder="如：116.4074"/>
         </el-form-item>
         <el-form-item label="救助站描述" prop="description">
           <el-input v-model="form.description" type="textarea" placeholder="请输入内容"/>
@@ -285,6 +293,8 @@ const reset = () => {
     phone: null,
     email: null,
     address: null,
+    latitude: null,
+    longitude: null,
     description: null,
     businessLicense: null,
     idCard: null,
