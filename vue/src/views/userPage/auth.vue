@@ -49,7 +49,7 @@
                 <el-input
                     v-model="form.address"
                     type="textarea"
-                    placeholder="请输入详细地址"
+                    placeholder="请填写可定位到地图的真实地址（省市区+街道门牌）"
                     :rows="3"
                 ></el-input>
               </el-form-item>

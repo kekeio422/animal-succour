@@ -136,7 +136,7 @@
           <el-input v-model="form.email" placeholder="请输入电子邮箱"/>
         </el-form-item>
         <el-form-item label="详细地址" prop="address">
-          <el-input v-model="form.address" type="textarea" placeholder="请输入内容"/>
+          <el-input v-model="form.address" type="textarea" placeholder="请填写真实地址（用于地图展示）"/>
         </el-form-item>
         <el-form-item label="救助站描述" prop="description">
           <el-input v-model="form.description" type="textarea" placeholder="请输入内容"/>

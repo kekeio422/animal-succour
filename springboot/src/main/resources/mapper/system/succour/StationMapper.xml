@@ -13,6 +13,8 @@
         <result property="phone"    column="phone"    />
         <result property="email"    column="email"    />
         <result property="address"    column="address"    />
+        <result property="latitude"    column="latitude"    />
+        <result property="longitude"    column="longitude"    />
         <result property="description"    column="description"    />
         <result property="businessLicense"    column="business_license"    />
         <result property="idCard"    column="id_card"    />
@@ -22,7 +24,7 @@
     </resultMap>
 
     <select id="selectStationList" parameterType="Station" resultMap="StationResult">
-        select s.station_id, s.status, s.name, s.logo, s.contact_person, s.phone, s.email, s.address,
+        select s.station_id, s.status, s.name, s.logo, s.contact_person, s.phone, s.email, s.address, s.latitude, s.longitude,
                s.description, s.business_license, s.id_card, s.user_id, s.create_time,
                u.user_name
         from station s
@@ -43,7 +45,7 @@
     </select>
 
     <select id="selectStationByStationId" parameterType="String" resultMap="StationResult">
-        select station_id, status, name, logo, contact_person, phone, email, address, description, business_license, id_card, user_id, create_time from station
+        select station_id, status, name, logo, contact_person, phone, email, address, latitude, longitude, description, business_license, id_card, user_id, create_time from station
         where station_id = #{stationId}
     </select>
 
@@ -58,6 +60,8 @@
             <if test="phone != null and phone != ''">phone,</if>
             <if test="email != null and email != ''">email,</if>
             <if test="address != null and address != ''">address,</if>
+            <if test="latitude != null">latitude,</if>
+            <if test="longitude != null">longitude,</if>
             <if test="description != null and description != ''">description,</if>
             <if test="businessLicense != null and businessLicense != ''">business_license,</if>
             <if test="idCard != null and idCard != ''">id_card,</if>
@@ -73,6 +77,8 @@
             <if test="phone != null and phone != ''">#{phone},</if>
             <if test="email != null and email != ''">#{email},</if>
             <if test="address != null and address != ''">#{address},</if>
+            <if test="latitude != null">#{latitude},</if>
+            <if test="longitude != null">#{longitude},</if>
             <if test="description != null and description != ''">#{description},</if>
             <if test="businessLicense != null and businessLicense != ''">#{businessLicense},</if>
             <if test="idCard != null and idCard != ''">#{idCard},</if>
@@ -91,6 +97,8 @@
             <if test="phone != null and phone != ''">phone = #{phone},</if>
             <if test="email != null and email != ''">email = #{email},</if>
             <if test="address != null and address != ''">address = #{address},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
             <if test="description != null and description != ''">description = #{description},</if>
             <if test="businessLicense != null and businessLicense != ''">business_license = #{businessLicense},</if>
             <if test="idCard != null and idCard != ''">id_card = #{idCard},</if>
@@ -130,7 +138,7 @@
 
     <!--查询状态为审核通过的救助站-->
     <select id="selectStationListByIsAuth" resultMap="StationResult">
-        select s.station_id, s.status, s.name, s.logo, s.contact_person, s.phone, s.email, s.address,
+        select s.station_id, s.status, s.name, s.logo, s.contact_person, s.phone, s.email, s.address, s.latitude, s.longitude,
                s.description, s.business_license, s.id_card, s.user_id, s.create_time
         from station s
         where status = '审核通过'

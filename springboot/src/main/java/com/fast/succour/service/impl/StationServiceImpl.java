@@ -3,10 +3,20 @@ package com.fast.succour.service.impl;
 import com.fast.succour.domain.Station;
 import com.fast.succour.mapper.StationMapper;
 import com.fast.succour.service.IStationService;
+import com.fast.system.general.utils.StringUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +31,10 @@ import static com.fast.system.general.utils.SecurityUtils.getUserId;
  */
 @Service
 public class StationServiceImpl implements IStationService {
+    private static final String GEOCODE_URL = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=";
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().build();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Resource
     private StationMapper stationMapper;
 
@@ -54,6 +68,7 @@ public class StationServiceImpl implements IStationService {
      */
     @Override
     public int insertStation(Station station) {
+        fillGeoLocation(station);
         station.setCreateTime(new Date());
         station.setStationId(String.valueOf(UUID.randomUUID()));
         station.setUserId(Math.toIntExact(getUserId()));
@@ -68,6 +83,9 @@ public class StationServiceImpl implements IStationService {
      */
     @Override
     public int updateStation(Station station) {
+        if (StringUtils.isNotEmpty(station.getAddress())) {
+            fillGeoLocation(station);
+        }
         return stationMapper.updateStation(station);
     }
 
@@ -121,5 +139,34 @@ public class StationServiceImpl implements IStationService {
     @Override
     public List<Station> selectStationListByIsAuth() {
         return stationMapper.selectStationListByIsAuth();
+    }
+
+    /**
+     * 通过地址转换经纬度，用于地图展示及地址真实性校验
+     */
+    private void fillGeoLocation(Station station) {
+        if (StringUtils.isBlank(station.getAddress())) {
+            throw new RuntimeException("请填写救助站真实地址后再提交认证");
+        }
+        try {
+            String encodeAddress = URLEncoder.encode(station.getAddress(), StandardCharsets.UTF_8);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(GEOCODE_URL + encodeAddress))
+                    .header("User-Agent", "animal-succour/1.0 (station geocode)")
+                    .GET()
+                    .build();
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            JsonNode root = OBJECT_MAPPER.readTree(response.body());
+            if (!root.isArray() || root.isEmpty()) {
+                throw new RuntimeException("地址无法识别，请填写更完整、真实的救助站地址");
+            }
+            JsonNode firstNode = root.get(0);
+            station.setLatitude(new BigDecimal(firstNode.path("lat").asText()));
+            station.setLongitude(new BigDecimal(firstNode.path("lon").asText()));
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("地址校验失败，请稍后重试或更换更准确的地址");
+        }
     }
 }
