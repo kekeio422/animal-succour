@@ -87,16 +87,17 @@
 </template>
 
 <script setup>
-import {nextTick, onMounted, ref, watch} from 'vue'
+import {computed, nextTick, onMounted, ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
 import {Female, House, Male} from '@element-plus/icons-vue'
+import {ElMessage} from "element-plus";
 import {listAnimal} from "@/api/succour/animal.js";
 import {selectAllCategory} from "@/api/succour/category.js";
 import {selectStationListByIsAuth} from "@/api/succour/station.js";
 
 const baseUrl = import.meta.env.VITE_APP_BASE_API
-const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-const LEAFLET_JS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+const AMAP_WEB_KEY = import.meta.env.VITE_AMAP_WEB_KEY
+const AMAP_JS_URL = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_WEB_KEY}`
 
 const router = useRouter()
 
@@ -129,7 +130,27 @@ const total = ref(0)
 const mapDialogVisible = ref(false)
 const stationList = ref([])
 const mapRef = ref(null)
-const leafletRef = ref(null)
+const markers = ref([])
+
+const stationAnimalCountMap = computed(() => {
+  const countMap = {}
+  animalList.value.forEach((animal) => {
+    if (!animal.stationId) {
+      return
+    }
+    countMap[animal.stationId] = (countMap[animal.stationId] || 0) + 1
+  })
+  return countMap
+})
+
+const mapStationList = computed(() => {
+  return stationList.value
+      .filter(station => stationAnimalCountMap.value[station.stationId] > 0)
+      .map(station => ({
+        ...station,
+        adoptableCount: stationAnimalCountMap.value[station.stationId]
+      }))
+})
 
 //查询数据
 const getList = () => {
@@ -145,80 +166,102 @@ const getList = () => {
   })
 }
 
-const loadLeaflet = async () => {
-  if (window.L) {
-    leafletRef.value = window.L
+const loadAMap = async () => {
+  if (!AMAP_WEB_KEY) {
+    ElMessage.warning('未配置高德地图 Key，暂时无法使用地图找宠物')
+    return
+  }
+  if (window.AMap) {
     return
   }
 
-  if (!document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) {
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = LEAFLET_CSS_URL
-    document.head.appendChild(link)
-  }
-
   await new Promise((resolve, reject) => {
-    const existScript = document.querySelector(`script[src="${LEAFLET_JS_URL}"]`)
+    const existScript = document.querySelector(`script[src="${AMAP_JS_URL}"]`)
     if (existScript) {
       existScript.addEventListener('load', resolve, {once: true})
       existScript.addEventListener('error', reject, {once: true})
-      if (window.L) {
+      if (window.AMap) {
         resolve()
       }
       return
     }
     const script = document.createElement('script')
-    script.src = LEAFLET_JS_URL
+    script.src = AMAP_JS_URL
     script.async = true
     script.onload = resolve
     script.onerror = reject
     document.body.appendChild(script)
   })
-
-  leafletRef.value = window.L
 }
 
 const openMapDialog = () => {
+  if (!AMAP_WEB_KEY) {
+    ElMessage.warning('未配置高德地图 Key，暂时无法使用地图找宠物')
+    return
+  }
   mapDialogVisible.value = true
 }
 
 const initMap = async () => {
   await nextTick()
-  await loadLeaflet()
+  await loadAMap()
   await loadStationList()
 
-  const L = leafletRef.value
-  if (!L || mapRef.value) {
+  if (!window.AMap || mapRef.value) {
     return
   }
 
-  mapRef.value = L.map('station-map')
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(mapRef.value)
+  mapRef.value = new window.AMap.Map('station-map', {
+    zoom: 5,
+    center: [116.4074, 39.9042],
+    viewMode: '2D'
+  })
 
-  const points = stationList.value
-      .filter(station => station.latitude && station.longitude)
-      .map(station => {
-        const lat = Number(station.latitude)
-        const lng = Number(station.longitude)
-        const marker = L.marker([lat, lng]).addTo(mapRef.value)
-        marker.bindPopup(`<b>${station.name}</b><br/>${station.address}`)
-        return [lat, lng]
-      })
+  const points = []
+  mapStationList.value.forEach(station => {
+    if (!station.latitude || !station.longitude) {
+      return
+    }
+    const lng = Number(station.longitude)
+    const lat = Number(station.latitude)
+    if (Number.isNaN(lng) || Number.isNaN(lat)) {
+      return
+    }
+    points.push([lng, lat])
+
+    const marker = new window.AMap.Marker({
+      position: [lng, lat],
+      title: station.name,
+      map: mapRef.value
+    })
+    const content = `
+      <div>
+        <strong>${station.name}</strong><br/>
+        地址：${station.address || '暂无'}<br/>
+        可领养宠物：${station.adoptableCount}只
+      </div>
+    `
+    const infoWindow = new window.AMap.InfoWindow({
+      offset: new window.AMap.Pixel(0, -30),
+      content
+    })
+    marker.on('click', () => {
+      infoWindow.open(mapRef.value, marker.getPosition())
+    })
+    markers.value.push(marker)
+  })
 
   if (points.length > 0) {
-    mapRef.value.fitBounds(points, {padding: [40, 40]})
+    mapRef.value.setFitView(markers.value)
   } else {
-    mapRef.value.setView([39.9042, 116.4074], 5)
+    ElMessage.info('当前筛选条件下暂无可展示在地图上的救助站')
   }
 }
 
 const destroyMap = () => {
+  markers.value = []
   if (mapRef.value) {
-    mapRef.value.remove()
+    mapRef.value.destroy()
     mapRef.value = null
   }
 }

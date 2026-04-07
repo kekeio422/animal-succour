@@ -68,3 +68,9 @@ pagehelper:
   helperDialect: mysql
   supportMethodsArguments: true
   params: count=countSql
+
+# 地图服务配置（中国大陆优先：高德）
+map:
+  amap:
+    # 高德 JS/HTTP API Key（必填，否则地址解析会失败）
+    web-key: ""

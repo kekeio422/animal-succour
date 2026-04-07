@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import {onMounted, ref} from 'vue'
 import { useRouter } from 'vue-router'
 import { Location, Phone } from '@element-plus/icons-vue'
 import {selectStationListByIsAuth} from "@/api/succour/station.js";
