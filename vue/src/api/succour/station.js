@@ -66,3 +66,12 @@ export function selectStationListByIsAuth() {
         method: 'get'
     })
 }
+
+// 地址联想建议
+export function addressTips(keywords) {
+    return request({
+        url: '/succour/station/addressTips',
+        method: 'get',
+        params: {keywords}
+    })
+}

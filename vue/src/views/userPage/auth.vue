@@ -46,12 +46,15 @@
               </el-form-item>
 
               <el-form-item label="详细地址" prop="address">
-                <el-input
+                <el-autocomplete
                     v-model="form.address"
-                    type="textarea"
-                    placeholder="请填写可定位到地图的真实地址（省市区+街道门牌）"
-                    :rows="3"
-                ></el-input>
+                    :fetch-suggestions="queryAddressTips"
+                    value-key="value"
+                    placeholder="请输入可定位地址，支持联想选择"
+                    style="width: 100%"
+                    clearable
+                    @select="handleAddressSelect"
+                />
               </el-form-item>
 
               <el-form-item label="救助站简介" prop="description">
@@ -140,7 +143,7 @@
 <script setup>
 import {ref, onMounted} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {addStation, selectIsAuth} from "@/api/succour/station.js";
+import {addStation, addressTips, selectIsAuth} from "@/api/succour/station.js";
 
 const currentStep = ref(0)
 const loading = ref(false)
@@ -154,6 +157,8 @@ const form = ref({
   phone: null,
   email: null,
   address: null,
+  latitude: null,
+  longitude: null,
   description: null,
   businessLicense: null,
   idCard: null,
@@ -196,6 +201,28 @@ const rules = {
 // 表单引用
 const oneForm = ref()
 const twoForm = ref()
+
+
+const queryAddressTips = (queryString, cb) => {
+  if (!queryString || !queryString.trim()) {
+    cb([])
+    return
+  }
+  addressTips(queryString.trim()).then((res) => {
+    const rows = (res.data || []).map(item => ({
+      value: item.fullAddress,
+      latitude: item.latitude,
+      longitude: item.longitude
+    }))
+    cb(rows)
+  }).catch(() => cb([]))
+}
+
+const handleAddressSelect = (item) => {
+  form.value.address = item.value
+  form.value.latitude = item.latitude || null
+  form.value.longitude = item.longitude || null
+}
 
 // 步骤控制
 const nextStep = async (step) => {
@@ -244,6 +271,8 @@ const submitAuth = () => {
         phone: null,
         email: null,
         address: null,
+        latitude: null,
+        longitude: null,
         description: null,
         businessLicense: null,
         idCard: null,
