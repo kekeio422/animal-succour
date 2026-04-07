@@ -31,6 +31,10 @@ logging:
 spring:
   profiles:
     active: druid
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:station_map_upgrade.sql
   # 文件上传
   servlet:
     multipart:
