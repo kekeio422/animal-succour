@@ -67,18 +67,36 @@
                   @pagination="getList"
               />
             </div>
+
+            <div class="map-action">
+              <el-button type="primary" plain @click="openMapDialog">地图找宠物</el-button>
+            </div>
         </div>
+
+      <el-dialog
+          v-model="mapDialogVisible"
+          title="附近救助站地图"
+          width="80%"
+          destroy-on-close
+          @opened="initMap"
+          @closed="destroyMap"
+      >
+        <div id="station-map" class="station-map"></div>
+      </el-dialog>
     </div>
 </template>
 
 <script setup>
-import {computed, ref} from 'vue'
+import {nextTick, onMounted, ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
 import {Female, House, Male} from '@element-plus/icons-vue'
 import {listAnimal} from "@/api/succour/animal.js";
 import {selectAllCategory} from "@/api/succour/category.js";
+import {selectStationListByIsAuth} from "@/api/succour/station.js";
 
 const baseUrl = import.meta.env.VITE_APP_BASE_API
+const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+const LEAFLET_JS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 
 const router = useRouter()
 
@@ -108,6 +126,10 @@ const animalList = ref([])
 
 //数据总数
 const total = ref(0)
+const mapDialogVisible = ref(false)
+const stationList = ref([])
+const mapRef = ref(null)
+const leafletRef = ref(null)
 
 //查询数据
 const getList = () => {
@@ -121,6 +143,89 @@ const getList = () => {
     total.value = res.total
     animalList.value = res.rows
   })
+}
+
+const loadLeaflet = async () => {
+  if (window.L) {
+    leafletRef.value = window.L
+    return
+  }
+
+  if (!document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = LEAFLET_CSS_URL
+    document.head.appendChild(link)
+  }
+
+  await new Promise((resolve, reject) => {
+    const existScript = document.querySelector(`script[src="${LEAFLET_JS_URL}"]`)
+    if (existScript) {
+      existScript.addEventListener('load', resolve, {once: true})
+      existScript.addEventListener('error', reject, {once: true})
+      if (window.L) {
+        resolve()
+      }
+      return
+    }
+    const script = document.createElement('script')
+    script.src = LEAFLET_JS_URL
+    script.async = true
+    script.onload = resolve
+    script.onerror = reject
+    document.body.appendChild(script)
+  })
+
+  leafletRef.value = window.L
+}
+
+const openMapDialog = () => {
+  mapDialogVisible.value = true
+}
+
+const initMap = async () => {
+  await nextTick()
+  await loadLeaflet()
+  await loadStationList()
+
+  const L = leafletRef.value
+  if (!L || mapRef.value) {
+    return
+  }
+
+  mapRef.value = L.map('station-map')
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(mapRef.value)
+
+  const points = stationList.value
+      .filter(station => station.latitude && station.longitude)
+      .map(station => {
+        const lat = Number(station.latitude)
+        const lng = Number(station.longitude)
+        const marker = L.marker([lat, lng]).addTo(mapRef.value)
+        marker.bindPopup(`<b>${station.name}</b><br/>${station.address}`)
+        return [lat, lng]
+      })
+
+  if (points.length > 0) {
+    mapRef.value.fitBounds(points, {padding: [40, 40]})
+  } else {
+    mapRef.value.setView([39.9042, 116.4074], 5)
+  }
+}
+
+const destroyMap = () => {
+  if (mapRef.value) {
+    mapRef.value.remove()
+    mapRef.value = null
+  }
+}
+
+const loadStationList = async () => {
+  const res = await selectStationListByIsAuth()
+  stationList.value = res.data || []
 }
 
 const categoryList = ref([
@@ -140,6 +245,7 @@ watch(animalFilter, (newVal) => {
 //组件挂载完成后执行
 onMounted(() => {
   getList()
+  loadStationList()
 
   //查询分类数据
   selectAllCategory().then(res => {
@@ -314,5 +420,16 @@ onMounted(() => {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.map-action {
+  display: flex;
+  justify-content: center;
+}
+
+.station-map {
+  width: 100%;
+  height: 60vh;
+  min-height: 460px;
 }
 </style>

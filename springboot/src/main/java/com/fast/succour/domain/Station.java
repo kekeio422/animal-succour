@@ -3,6 +3,7 @@ package com.fast.succour.domain;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 /**
@@ -37,6 +38,12 @@ public class Station {
 
     /** 详细地址 */
     private String address;
+
+    /** 纬度 */
+    private BigDecimal latitude;
+
+    /** 经度 */
+    private BigDecimal longitude;
 
     /** 救助站描述 */
     private String description;
