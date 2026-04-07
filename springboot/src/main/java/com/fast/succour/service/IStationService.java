@@ -3,6 +3,7 @@ package com.fast.succour.service;
 import com.fast.succour.domain.Station;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 救助站Service接口
@@ -70,4 +71,11 @@ public interface IStationService
      * @return 救助站列表
      */
     List<Station> selectStationListByIsAuth();
+
+    /**
+     * 根据输入内容获取地址联想建议
+     * @param keywords 地址关键词
+     * @return 建议地址列表
+     */
+    List<Map<String, String>> selectAddressTips(String keywords);
 }
