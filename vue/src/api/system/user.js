@@ -83,6 +83,9 @@ export function updateUserProfile(data) {
   return request({
     url: '/system/user/profile',
     method: 'put',
+    headers: {
+      repeatSubmit: false
+    },
     data: data
   })
 }

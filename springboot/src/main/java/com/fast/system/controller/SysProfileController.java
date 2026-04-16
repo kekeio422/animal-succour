@@ -5,6 +5,7 @@ import com.fast.system.general.core.controller.BaseController;
 import com.fast.system.general.core.domain.AjaxResult;
 import com.fast.system.domain.SysUser;
 import com.fast.system.general.core.domain.model.LoginUser;
+import com.fast.system.general.utils.StringUtils;
 import com.fast.system.general.utils.file.FileUploadUtils;
 import com.fast.system.general.utils.file.MimeTypeUtils;
 import com.fast.system.service.ISysUserService;
@@ -48,11 +49,14 @@ public class SysProfileController extends BaseController {
         currentUser.setEmail(user.getEmail());
         currentUser.setPhonenumber(user.getPhonenumber());
         currentUser.setSex(user.getSex());
-        if (!user.getPhonenumber().isEmpty() && !userService.checkPhoneUnique(currentUser)) {
+        if (StringUtils.isNotEmpty(user.getPhonenumber()) && !userService.checkPhoneUnique(currentUser)) {
             return error("修改用户'" + loginUser.getUsername() + "'失败，手机号码已存在");
         }
-        if (!user.getEmail().isEmpty() && !userService.checkEmailUnique(currentUser)) {
+        if (StringUtils.isNotEmpty(user.getEmail()) && !userService.checkEmailUnique(currentUser)) {
             return error("修改用户'" + loginUser.getUsername() + "'失败，邮箱账号已存在");
+        }
+        if (userService.updateUserProfile(currentUser) > 0) {
+            return success();
         }
         return error("修改个人信息异常，请联系管理员");
     }

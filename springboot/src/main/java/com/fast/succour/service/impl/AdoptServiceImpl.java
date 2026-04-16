@@ -3,6 +3,7 @@ package com.fast.succour.service.impl;
 import com.fast.succour.domain.Adopt;
 import com.fast.succour.domain.Animal;
 import com.fast.succour.mapper.AdoptMapper;
+import com.fast.succour.service.IAdoptFollowupService;
 import com.fast.succour.service.IAdoptService;
 import com.fast.succour.service.IAnimalService;
 import com.fast.system.mapper.SysRoleMapper;
@@ -32,6 +33,9 @@ public class AdoptServiceImpl implements IAdoptService {
 
     @Resource
     private IAnimalService animalService;
+
+    @Resource
+    private IAdoptFollowupService adoptFollowupService;
 
     /**
      * 查询领养申请
@@ -87,7 +91,14 @@ public class AdoptServiceImpl implements IAdoptService {
      */
     @Override
     public int updateAdopt(Adopt adopt) {
-        return adoptMapper.updateAdopt(adopt);
+        Adopt oldAdopt = adoptMapper.selectAdoptByAdoptId(adopt.getAdoptId());
+        int rows = adoptMapper.updateAdopt(adopt);
+        if (rows > 0 && adopt.getStatus() != null
+                && "已完成".equals(adopt.getStatus())
+                && (oldAdopt == null || !"已完成".equals(oldAdopt.getStatus()))) {
+            adoptFollowupService.generateFollowupsForAdopt(adopt.getAdoptId());
+        }
+        return rows;
     }
 
     /**

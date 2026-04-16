@@ -16,7 +16,7 @@
          </el-radio-group>
       </el-form-item>
       <el-form-item>
-      <el-button type="primary" @click="submit">保存</el-button>
+      <el-button type="primary" :loading="submitting" :disabled="submitting" @click="submit">保存</el-button>
       <el-button type="danger" @click="close">关闭</el-button>
       </el-form-item>
    </el-form>
@@ -34,6 +34,7 @@ const props = defineProps({
 const { proxy } = getCurrentInstance()
 
 const form = ref({})
+const submitting = ref(false)
 const rules = ref({
   nickName: [{ required: true, message: "用户昵称不能为空", trigger: "blur" }],
   email: [{ required: true, message: "邮箱地址不能为空", trigger: "blur" }, { type: "email", message: "请输入正确的邮箱地址", trigger: ["blur", "change"] }],
@@ -42,12 +43,20 @@ const rules = ref({
 
 /** 提交按钮 */
 function submit() {
+  if (submitting.value) {
+    return
+  }
   proxy.$refs.userRef.validate(valid => {
     if (valid) {
+      submitting.value = true
       updateUserProfile(form.value).then(response => {
         proxy.$modal.msgSuccess("修改成功")
         props.user.phonenumber = form.value.phonenumber
         props.user.email = form.value.email
+        props.user.nickName = form.value.nickName
+        props.user.sex = form.value.sex
+      }).finally(() => {
+        submitting.value = false
       })
     }
   })
